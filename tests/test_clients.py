@@ -4,7 +4,14 @@ import pytest
 import requests
 import responses
 
-from hiring_pipeline.clients import GreenhouseClient, get_client, make_session
+from hiring_pipeline.clients import (
+    CLIENTS,
+    AshbyClient,
+    GreenhouseClient,
+    LeverClient,
+    get_client,
+    make_session,
+)
 
 GH_URL = "https://boards-api.greenhouse.io/v1/boards/acme/jobs?content=true"
 
@@ -151,10 +158,59 @@ def test_no_wait_when_enough_time_has_passed():
 # --- client lookup -------------------------------------------------------
 
 
-def test_get_client_by_platform_name():
-    assert isinstance(get_client("greenhouse", min_interval=0), GreenhouseClient)
+@pytest.mark.parametrize(
+    ("platform", "expected"),
+    [("greenhouse", GreenhouseClient), ("lever", LeverClient), ("ashby", AshbyClient)],
+)
+def test_get_client_by_platform_name(platform, expected):
+    assert isinstance(get_client(platform, min_interval=0), expected)
+
+
+def test_every_seed_platform_has_a_client():
+    assert set(CLIENTS) == {"greenhouse", "lever", "ashby"}
 
 
 def test_get_client_rejects_unknown_platform():
     with pytest.raises(ValueError, match="workday"):
         get_client("workday")
+
+
+# --- Lever and Ashby -----------------------------------------------------
+
+LEVER_URL = "https://api.lever.co/v0/postings/acme?mode=json"
+ASHBY_URL = (
+    "https://api.ashbyhq.com/posting-api/job-board/acme?includeCompensation=true"
+)
+
+
+@responses.activate
+def test_lever_stores_list_payload():
+    postings = [{"id": "a1", "text": "Analytics Engineer"}]
+    responses.get(LEVER_URL, json=postings)
+    snap = LeverClient(session=make_session(backoff_factor=0), min_interval=0).fetch(
+        "acme"
+    )
+    assert snap.board_id == "lever:acme"
+    assert snap.payload == postings  # Lever returns a bare list, kept as-is
+
+
+@responses.activate
+def test_lever_missing_board():
+    responses.get(LEVER_URL, status=404, json={"ok": False})
+    snap = LeverClient(session=make_session(backoff_factor=0), min_interval=0).fetch(
+        "acme"
+    )
+    assert snap.http_status == 404
+    assert snap.payload is None
+
+
+@responses.activate
+def test_ashby_requests_compensation():
+    payload = {"jobs": [{"title": "Data Scientist", "compensation": {}}]}
+    responses.get(ASHBY_URL, json=payload)
+    snap = AshbyClient(session=make_session(backoff_factor=0), min_interval=0).fetch(
+        "acme"
+    )
+    assert snap.board_id == "ashby:acme"
+    assert snap.payload == payload
+    assert "includeCompensation=true" in responses.calls[0].request.url
