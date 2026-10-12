@@ -1,10 +1,12 @@
 """Job board API clients, one per platform."""
 
+from hiring_pipeline.clients.ashby import AshbyClient
 from hiring_pipeline.clients.base import BoardClient, Snapshot, make_session
 from hiring_pipeline.clients.greenhouse import GreenhouseClient
+from hiring_pipeline.clients.lever import LeverClient
 
 CLIENTS: dict[str, type[BoardClient]] = {
-    GreenhouseClient.platform: GreenhouseClient,
+    client.platform: client for client in (GreenhouseClient, LeverClient, AshbyClient)
 }
 
 
@@ -19,8 +21,10 @@ def get_client(platform: str, **kwargs) -> BoardClient:
 
 __all__ = [
     "CLIENTS",
+    "AshbyClient",
     "BoardClient",
     "GreenhouseClient",
+    "LeverClient",
     "Snapshot",
     "get_client",
     "make_session",
