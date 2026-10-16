@@ -30,9 +30,29 @@ SEED_PATH = Path(
 )
 
 
+# LEARNING ITEM: What is @dag?
+
+# KEY IDEA: Parse time vs run time
+
+# Airflow’s scheduler re-reads (parses) every file in your
+#   dags/ folder every 30 seconds or so.
+# When it parses this file, it does not fetch any job boards.
+# It only builds a description of the work: what tasks exist, how they connect,
+# and when to run them.
+# The actual work happens later, when a worker executes a task.
+
+# @dag(...) plus def collect_job_boards(): defines a DAG factory:
+#   a function that, when called, builds the DAG.
+# collect_job_boards() at the very bottom of the file calls that factory.
+# That call is what registers the DAG with Airflow.
+# Without it, the file parses fine but no DAG shows up in the UI.
+
+
 @dag(
+    # Unique name in the UI, the CLI, and the metadata database.
     dag_id="collect_job_boards",
-    schedule="45 12 * * *",  # daily, 12:45 UTC (early morning in the US)
+    # Cron expression: in UTC: minute, hour, day-of-month, month, day-of-week
+    schedule="45 12 * * *",
     start_date=datetime(2026, 10, 1, tzinfo=UTC),
     catchup=False,  # postings can't be fetched for past days
     max_active_runs=1,
@@ -40,8 +60,11 @@ SEED_PATH = Path(
     tags=["ingest"],
 )
 def collect_job_boards():
+    # Inside the function, the @task functions are only declared at parse time.
+    # Their bodies run later, on a worker.
     @task
     def list_platforms() -> list[str]:
+        # Cheap and easy. Opens a small CSV
         boards = ingest.read_boards(SEED_PATH)
         groups = ingest.group_by_platform(boards)
         log.info("Boards per platform: %s", {p: len(b) for p, b in groups.items()})
