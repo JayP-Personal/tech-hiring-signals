@@ -6,11 +6,11 @@
 --
 -- Failed fetches are recorded too (payload NULL, http_status set), so gaps
 -- in collection and boards that stop responding are visible downstream.
- 
-use role sysadmin;
+
+use role accountadmin;
 use database tech_hiring_db;
 use schema raw;
- 
+
 create table if not exists job_board_snapshots (
     board_id varchar not null
     comment 'platform:board_slug, matches the companies seed',
@@ -30,7 +30,15 @@ create table if not exists job_board_snapshots (
     comment 'when the row was inserted'
 )
 comment = 'Daily snapshots of public job board API responses (append-only)';
- 
+
 -- The loader writes (delete is only for re-running a failed run); dbt reads.
 grant select, insert, delete on table job_board_snapshots to role loader;
 grant select on table job_board_snapshots to role transformer;
+
+-- Internal stage for per-run files. The DAG uploads one gzipped JSON-lines
+-- file per platform per run, then loads them with COPY INTO.
+create stage if not exists job_board_stage
+    file_format = (type = json)
+    comment = 'Per-run JSON-lines files of job board snapshots';
+
+grant read, write on stage job_board_stage to role loader;

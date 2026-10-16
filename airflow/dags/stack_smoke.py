@@ -8,7 +8,13 @@ DBT_BIN = "/usr/local/airflow/dbt_venv/bin/dbt"
 DBT_PROJECT = "/usr/local/airflow/dbt"
 
 
-@dag(start_date=datetime(2026, 1, 1), schedule=None, catchup=False, tags=["smoke"])
+@dag(
+    start_date=datetime(2026, 1, 1),
+    schedule=None,
+    catchup=False,
+    tags=["smoke"],
+    default_args={"retries": 2},
+)
 def stack_smoke():
     @task
     def import_package() -> str:
