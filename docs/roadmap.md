@@ -22,10 +22,10 @@ community inventory and verified against each board's live API (see ADR 0003).
 - [x] `feat(seeds)`: freeze the core cohort into the dbt seed (platform, slug, stratum, source list, added_on, status)
 
 ### Collection
-- [ ] `feat(snowflake)`: raw table for job board responses (`VARIANT` payload, company, platform, board slug, fetched_at)
-- [ ] `feat(ingest)`: common client interface and Greenhouse client with retries, rate limiting and tests
-- [ ] `feat(ingest)`: Lever client with tests
-- [ ] `feat(ingest)`: Ashby client with tests
+- [x] `feat(snowflake)`: raw table for job board responses (`VARIANT` payload, company, platform, board slug, fetched_at)
+- [x] `feat(ingest)`: common client interface and Greenhouse client with retries, rate limiting and tests
+- [x] `feat(ingest)`: Lever client with tests
+- [x] `feat(ingest)`: Ashby client with tests
 - [ ] `feat(airflow)`: daily DAG that loads all boards into Snowflake, plus a DAG import test
 - [ ] `feat(airflow)`: failure alerting
 - [ ] `chore(release)`: v0.2.0
